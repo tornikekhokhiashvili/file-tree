@@ -14,6 +14,7 @@ Build a String representation of directory hierarchy under a given path
     
 5. If a given path *refers to a directory*, return a String with its name, total size and its full hierarchy:
 
+
     some-dir 100 bytes
     ├─ some-inner-dir 50 bytes
     │  ├─ some-file.txt 20 bytes    
