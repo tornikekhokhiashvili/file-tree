@@ -4,7 +4,7 @@
 Build a String representation of directory hierarchy under a given path  
 
 ## Details
-1. Implement `tree` method in [FileTreeImpl](src/main/java/com/efimchick/ifmo/io/filetree/FileTreeImpl.java) class.
+1. Implement the `tree` method in [FileTreeImpl](src/main/java/com/efimchick/ifmo/io/filetree/FileTreeImpl.java) class.
 2. An input parameter is a path.
 3. If a given path *does not exist*, return an empty Optional.
 4. If a given path *refers to a file*, return a String with its name and size like this: 
@@ -21,7 +21,7 @@ Build a String representation of directory hierarchy under a given path
     │  └─ some-other-file.txt 30 bytes
     └─ some-one-more-file.txt 50 bytes
     
-- Use pseudo-graphic charactersto format output.
+- Use pseudo-graphic characters to format the output.
 - Compute the size of a directory as a sum of all its contents.
 - Sort the contents in following way:
     - Directories should go first.
