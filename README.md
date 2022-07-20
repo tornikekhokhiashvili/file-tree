@@ -1,6 +1,6 @@
 # File Tree
 **Please be aware the path on Unix enviroment is CASE SENSITIVE.** For example path usr/path/custom/example.txt 
-is equels to usr/Path/Custom/Example.txt on Windows but NOT on UNIX environment.
+is equals to usr/Path/Custom/Example.txt on Windows but NOT on UNIX environment.
 
 ## Description
 Build a String representation of directory hierarchy under a given path  
