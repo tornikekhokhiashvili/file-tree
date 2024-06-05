@@ -1,132 +1,94 @@
 package com.efimchick.ifmo.io.filetree;
 
-import java.io.IOException;
-import java.nio.file.Files;
+import java.io.File;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 public class FileTreeImpl implements FileTree {
-    private StringBuilder result = new StringBuilder();
-    private Path parent;
-    private Set<Integer> needLine = new HashSet<>();
-    private int levelOfFile;
-
+    private static final String BYTES = " bytes";
 
     @Override
     public Optional<String> tree(Path path) {
-        if (path == null || Files.notExists(path)) {
+        File file = new File(String.valueOf(path));
+        if (!file.exists()) {
             return Optional.empty();
         }
-        parent = path;
-        result.append(path.getFileName().toString());
-        try {
-            result.append(getSize(path));
-            if (Files.isDirectory(path)) {
-                readDir(path);
+        if (file.isFile()) {
+            return Optional.of(file.getName() + " " + file.length() + BYTES);
+        }
+        if (file.isDirectory()) {
+            return Optional.of(buildDirectoryTree(file, new ArrayList<>()));
+        }
+        return Optional.empty();
+    }
+
+    private String buildDirectoryTree(File folder, List<Boolean> lastFolders) {
+        StringBuilder directory = new StringBuilder();
+        if (!lastFolders.isEmpty()) {
+            directory.append(lastFolders.get(lastFolders.size() - 1) ? "└─ " : "├─ ");
+        }
+        directory.append(folder.getName()).append(" ").append(folderSize(folder));
+
+        File[] files = folder.listFiles();
+        int count = files.length;
+        files = sortFiles(files);
+
+        for (int i = 0; i < count; i++) {
+            directory.append("\n");
+            for (Boolean lastFolder : lastFolders) {
+                directory.append(lastFolder ? "   " : "│  ");
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return Optional.of(result.toString());
-    }
-    private StringBuilder getSize(Path path) throws IOException {
-        long size = Files.walk(path)
-                .map(f -> f.toFile())
-                .filter(f -> f.isFile())
-                .mapToLong(f -> f.length()).sum();
-        return new StringBuilder(" ").append(size).append(" bytes\n");
-    }
 
-    private void readDir (Path path) throws IOException {
-        levelOfFile++;
-        List<Path> listOfFiles = Files.list(path)
-                .sorted((p1, p2) -> p1.getFileName().toString()
-                        .compareToIgnoreCase(p2.getFileName().toString()))
-                .sorted((f1, f2) -> { int file1 = Files.isDirectory(f1) ? 1 : 0;
-                    int file2 = Files.isDirectory(f2) ? 1 : 0;
-                    return file2 - file1; })
-                .collect(Collectors.toList());
-        List<IsLastInDir> isLast = getIsLastInDir(listOfFiles);
-        for (IsLastInDir file : isLast) {
-            Path filePath = file.getPath();
-            if (Files.isDirectory(filePath)) {
-                result.append(createDirLine(file));
-                readDir(filePath);
-            } else {
-                result.append(createFileLine(file));
+            if (files[i].isFile()) {
+                directory.append(i + 1 == count ? "└" : "├")
+                        .append("─ ")
+                        .append(files[i].getName())
+                        .append(" ")
+                        .append(files[i].length())
+                        .append(BYTES);
             }
+            else  {
+                ArrayList<Boolean> list = new ArrayList<>(lastFolders);
+                list.add(i + 1 == count);
+                directory.append(buildDirectoryTree(files[i], list));
+            }
+
         }
+        return directory.toString();
     }
 
-    private StringBuilder createDirLine(IsLastInDir file) {
-        StringBuilder fileLine = new StringBuilder();
-        createIndent(fileLine);
-        if (file.isLastInDir()) {
-            needLine.remove(fileLine.length());
-            fileLine.append("└─ ");
-        } else {
-            needLine.add(fileLine.length());
-            fileLine.append("├─ ");
-        }
-        addNameAndSize(fileLine, file.getPath());
-        markLine(fileLine);
-        return fileLine;
-    }
+    private long getFolderSize(File folder) {
+        long size = 0;
+        File[] files = folder.listFiles();
 
-    private void createIndent(StringBuilder fileLine) {
-        for (int i = 1; i < levelOfFile; i++) {
-            fileLine.append("   ");
-        }
-    }
-
-    private void addNameAndSize(StringBuilder fileLine, Path filePath) {
-        fileLine.append(filePath.getFileName());
-        try {
-            fileLine.append(getSize(filePath));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void markLine(StringBuilder fileLine) {
-        for (Integer index : needLine) {
-            if (fileLine.charAt(index) == ' ') {
-                fileLine.setCharAt(index, '│');
+        for (File file : files) {
+            if (file.isFile()) {
+                size += file.length();
+            }else {
+                size += getFolderSize(file);
             }
         }
+        return size;
+    }
+    private String folderSize(File folder) {
+        return getFolderSize(folder) + BYTES;
     }
 
-    private List<IsLastInDir> getIsLastInDir(List<Path> list) {
-        List<IsLastInDir> isLast = new ArrayList<>();
-        for (Path f: list) {
-            isLast.add(new IsLastInDir(f));
-        }
-        isLast.get(isLast.size() - 1).setLastInDir(true);
-        return isLast;
-    }
+    private File[] sortFiles(File[] folder) {
+        Arrays.sort(folder, (file1, file2) -> {
+            boolean isDirectory1 = file1.isDirectory();
+            boolean isDirectory2 = file2.isDirectory();
 
-    private StringBuilder createFileLine(IsLastInDir file) {
-        StringBuilder fileLine = new StringBuilder();
-        createIndent(fileLine);
-        if (file.isLastInDir()) {
-            needLine.remove(fileLine.length());
-            for (int i = fileLine.length() - 3; i >= 0 ; i-=3) {
-                if (!needLine.contains(i)) {
-                    levelOfFile--;
-                } else {
-                    break;
-                }
+            if (isDirectory1 && !isDirectory2) {
+                return -1;
+            } else if (!isDirectory1 && isDirectory2) {
+                return 1;
             }
-            fileLine.append("└─ ");
-            levelOfFile--;
-        } else {
-            needLine.add(fileLine.length());
-            fileLine.append("├─ ");
-        }
-        addNameAndSize(fileLine, file.getPath());
-        markLine(fileLine);
-        return fileLine;
+
+            // Compare file names ignoring case
+            return file1.getName().compareToIgnoreCase(file2.getName());
+        });
+        return folder;
     }
 }
